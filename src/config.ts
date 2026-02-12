@@ -22,6 +22,7 @@ export const MAIN_GROUP_FOLDER = 'main';
 
 export const CONTAINER_IMAGE =
   process.env.CONTAINER_IMAGE || 'nanoclaw-agent:latest';
+export const AGENT_RUNTIME = process.env.AGENT_RUNTIME || 'cloudflare';
 export const CONTAINER_TIMEOUT = parseInt(
   process.env.CONTAINER_TIMEOUT || '1800000',
   10,
@@ -38,6 +39,19 @@ export const IDLE_TIMEOUT = parseInt(
 export const MAX_CONCURRENT_CONTAINERS = Math.max(
   1,
   parseInt(process.env.MAX_CONCURRENT_CONTAINERS || '5', 10) || 5,
+);
+
+export const CLOUDFLARE_AGENT_ENDPOINT =
+  process.env.CLOUDFLARE_AGENT_ENDPOINT ||
+  'https://api.moltworker.dev/v1/agent/run';
+export const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || '';
+export const CLOUDFLARE_ACCESS_CLIENT_ID =
+  process.env.CLOUDFLARE_ACCESS_CLIENT_ID || '';
+export const CLOUDFLARE_ACCESS_CLIENT_SECRET =
+  process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET || '';
+export const CLOUDFLARE_REQUEST_TIMEOUT = parseInt(
+  process.env.CLOUDFLARE_REQUEST_TIMEOUT || '120000',
+  10,
 );
 
 function escapeRegex(str: string): string {
