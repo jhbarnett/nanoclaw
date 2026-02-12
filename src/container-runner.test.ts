@@ -8,6 +8,12 @@ const OUTPUT_END_MARKER = '---NANOCLAW_OUTPUT_END---';
 
 // Mock config
 vi.mock('./config.js', () => ({
+  AGENT_RUNTIME: 'container',
+  CLOUDFLARE_ACCESS_CLIENT_ID: '',
+  CLOUDFLARE_ACCESS_CLIENT_SECRET: '',
+  CLOUDFLARE_AGENT_ENDPOINT: 'https://example.com/v1/agent/run',
+  CLOUDFLARE_API_TOKEN: 'test-token',
+  CLOUDFLARE_REQUEST_TIMEOUT: 120000,
   CONTAINER_IMAGE: 'nanoclaw-agent:latest',
   CONTAINER_MAX_OUTPUT_SIZE: 10485760,
   CONTAINER_TIMEOUT: 1800000, // 30min

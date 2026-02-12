@@ -1,0 +1,12 @@
+cloudflare_api_token   = "<cloudflare-api-token>"
+cloudflare_account_id  = "<account-id>"
+zone_id                = "<zone-id>"
+zone_name              = "example.com"
+environment            = "prod"
+worker_name            = "nanoclaw-moltworker"
+worker_script_path     = "./worker/dist/index.js"
+worker_route_pattern   = "agent.example.com/*"
+enable_access          = true
+access_hostname        = "agent.example.com"
+allowed_service_token_name = "nanoclaw-agent-service-token"
+rate_limit_requests_per_minute = 120

@@ -32,7 +32,7 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 
 **Small enough to understand.** One process, a few source files. No microservices, no message queues, no abstraction layers. Have Claude Code walk you through it.
 
-**Secure by isolation.** Agents run in Linux containers (Apple Container on macOS, or Docker). They can only see what's explicitly mounted. Bash access is safe because commands run inside the container, not on your host.
+**Secure by isolation.** Agents run in a hardened runtime (Cloudflare Workers via Moltworker, or local containers). They can only see what's explicitly mounted or injected. Bash access stays isolated from your host.
 
 **Built for one user.** This isn't a framework. It's working software that fits my exact needs. You fork it and have Claude Code make it match your exact needs.
 
@@ -51,7 +51,7 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 - **Main channel** - Your private channel (self-chat) for admin control; every other group is completely isolated
 - **Scheduled tasks** - Recurring jobs that run Claude and can message you back
 - **Web access** - Search and fetch content
-- **Container isolation** - Agents sandboxed in Apple Container (macOS) or Docker (macOS/Linux)
+- **Cloudflare runtime** - Agents can run in Cloudflare Workers via Moltworker
 - **Agent Swarms** - Spin up teams of specialized agents that collaborate on complex tasks (first personal AI assistant to support this)
 - **Optional integrations** - Add Gmail (`/add-gmail`) and more via skills
 
@@ -110,18 +110,18 @@ Skills we'd love to see:
 
 ## Requirements
 
-- macOS or Linux
+- Cloudflare account (for production deployment)
 - Node.js 20+
 - [Claude Code](https://claude.ai/download)
-- [Apple Container](https://github.com/apple/container) (macOS) or [Docker](https://docker.com/products/docker-desktop) (macOS/Linux)
+- Optional local runtime: [Docker](https://docker.com/products/docker-desktop)
 
 ## Architecture
 
 ```
-WhatsApp (baileys) --> SQLite --> Polling loop --> Container (Claude Agent SDK) --> Response
+WhatsApp (baileys) --> SQLite --> Polling loop --> Cloudflare runtime (Moltworker) --> Response
 ```
 
-Single Node.js process. Agents execute in isolated Linux containers with mounted directories. Per-group message queue with concurrency control. IPC via filesystem.
+Single Node.js process. Agents execute in an isolated runtime (Cloudflare by default, local containers optional). Per-group message queue with concurrency control. IPC via filesystem.
 
 Key files:
 - `src/index.ts` - Orchestrator: state, message loop, agent invocation
@@ -129,7 +129,7 @@ Key files:
 - `src/ipc.ts` - IPC watcher and task processing
 - `src/router.ts` - Message formatting and outbound routing
 - `src/group-queue.ts` - Per-group queue with global concurrency limit
-- `src/container-runner.ts` - Spawns streaming agent containers
+- `src/container-runner.ts` - Dispatches agent execution (Cloudflare or local container runtime)
 - `src/task-scheduler.ts` - Runs scheduled tasks
 - `src/db.ts` - SQLite operations (messages, groups, sessions, state)
 - `groups/*/CLAUDE.md` - Per-group memory
@@ -140,9 +140,9 @@ Key files:
 
 Because I use WhatsApp. Fork it and run a skill to change it. That's the whole point.
 
-**Why Apple Container instead of Docker?**
+**Why Cloudflare runtime by default?**
 
-On macOS, Apple Container is lightweight, fast, and optimized for Apple silicon. But Docker is also fully supported—during `/setup`, you can choose which runtime to use. On Linux, Docker is used automatically.
+Cloudflare Workers give us a hardened sandbox, managed edge runtime, and straightforward access controls (Cloudflare Access + WAF) while keeping infra costs low.
 
 **Can I run this on Linux?**
 
