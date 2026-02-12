@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 import {
+  AGENT_RUNTIME,
   ASSISTANT_NAME,
   DATA_DIR,
   IDLE_TIMEOUT,
@@ -392,6 +393,11 @@ function recoverPendingMessages(): void {
 }
 
 function ensureContainerSystemRunning(): void {
+  if (AGENT_RUNTIME === 'cloudflare') {
+    logger.info('Cloudflare runtime enabled, skipping local container checks');
+    return;
+  }
+
   try {
     execSync('container system status', { stdio: 'pipe' });
     logger.debug('Apple Container system already running');

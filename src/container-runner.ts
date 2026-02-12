@@ -8,6 +8,12 @@ import os from 'os';
 import path from 'path';
 
 import {
+  AGENT_RUNTIME,
+  CLOUDFLARE_ACCESS_CLIENT_ID,
+  CLOUDFLARE_ACCESS_CLIENT_SECRET,
+  CLOUDFLARE_AGENT_ENDPOINT,
+  CLOUDFLARE_API_TOKEN,
+  CLOUDFLARE_REQUEST_TIMEOUT,
   CONTAINER_IMAGE,
   CONTAINER_MAX_OUTPUT_SIZE,
   CONTAINER_TIMEOUT,
@@ -53,6 +59,89 @@ interface VolumeMount {
   hostPath: string;
   containerPath: string;
   readonly: boolean;
+}
+
+async function runCloudflareAgent(
+  group: RegisteredGroup,
+  input: ContainerInput,
+  onOutput?: (output: ContainerOutput) => Promise<void>,
+): Promise<ContainerOutput> {
+  if (!CLOUDFLARE_API_TOKEN) {
+    return {
+      status: 'error',
+      result: null,
+      error: 'Missing CLOUDFLARE_API_TOKEN for cloudflare runtime',
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CLOUDFLARE_REQUEST_TIMEOUT);
+
+  try {
+    const headers: Record<string, string> = {
+      'content-type': 'application/json',
+      authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
+    };
+
+    if (CLOUDFLARE_ACCESS_CLIENT_ID && CLOUDFLARE_ACCESS_CLIENT_SECRET) {
+      headers['CF-Access-Client-Id'] = CLOUDFLARE_ACCESS_CLIENT_ID;
+      headers['CF-Access-Client-Secret'] = CLOUDFLARE_ACCESS_CLIENT_SECRET;
+    }
+
+    const response = await fetch(CLOUDFLARE_AGENT_ENDPOINT, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        prompt: input.prompt,
+        sessionId: input.sessionId,
+        metadata: {
+          group: group.name,
+          folder: input.groupFolder,
+          main: input.isMain,
+          scheduledTask: !!input.isScheduledTask,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return {
+        status: 'error',
+        result: null,
+        error: `Cloudflare agent request failed (${response.status}): ${text.slice(0, 300)}`,
+      };
+    }
+
+    const body = (await response.json()) as {
+      result?: string;
+      output?: string;
+      sessionId?: string;
+      status?: 'success' | 'error';
+      error?: string;
+    };
+
+    const output: ContainerOutput = {
+      status: body.status || 'success',
+      result: body.result || body.output || null,
+      newSessionId: body.sessionId,
+      error: body.error,
+    };
+
+    if (onOutput) {
+      await onOutput(output);
+    }
+
+    return output;
+  } catch (err) {
+    return {
+      status: 'error',
+      result: null,
+      error: `Cloudflare runtime error: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function buildVolumeMounts(
@@ -232,6 +321,11 @@ export async function runContainerAgent(
   onProcess: (proc: ChildProcess, containerName: string) => void,
   onOutput?: (output: ContainerOutput) => Promise<void>,
 ): Promise<ContainerOutput> {
+  if (AGENT_RUNTIME === 'cloudflare') {
+    logger.info({ group: group.name }, 'Running agent via Cloudflare runtime');
+    return runCloudflareAgent(group, input, onOutput);
+  }
+
   const startTime = Date.now();
 
   const groupDir = path.join(GROUPS_DIR, group.folder);
